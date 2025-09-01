@@ -1,349 +1,248 @@
-# ✨ Self-Healing Data Pipeline 🛡️
+🔄 Self-Healing Data Pipeline
 
-A production-grade approach to building **resilient, observable, and automated data pipelines** that detect, diagnose, and recover from failures **without human intervention**.
+A production-grade framework to build resilient, observable, and automated data pipelines that can detect, diagnose, and recover from failures without human intervention.
 
----
+📌 Executive Summary
 
-## 🌟 Executive Summary
+Modern businesses depend on continuous, trustworthy data to power analytics, personalization, and AI.
 
-Modern businesses depend on continuous, trustworthy data to power analytics, personalization, and AI. Traditional pipelines fail silently, recover slowly, and require manual effort—resulting in lost revenue, stale dashboards, and compliance risk.
+Traditional pipelines:
 
-**This project delivers a *Self-Healing Data Pipeline*:** an orchestrated, observable, and governed flow that *automatically detects anomalies and failures*, *applies the right remediation strategy* (retry, fallback, quarantine, backfill), and *proves end-to-end data lineage*. It reduces mean time to recovery (MTTR), protects SLAs/SLOs, and increases stakeholder trust in data.
+Fail silently.
 
----
+Recover slowly.
 
-## 💔 The Problem (Why this matters)
+Require manual firefighting.
 
-### Business Symptoms 📉
-*   Late or missing dashboards; inaccurate KPIs during critical windows (e.g., finance close, campaign launch).
-*   Fragile batch jobs that break on upstream schema changes or API rate limits.
-*   Incident resolution that relies on tribal knowledge, Slack threads, and one or two “pipeline heroes.”
-*   Limited answers to simple questions like *“Where did this number come from?”* or *“What was the blast radius?”*
+👉 This project delivers a Self-Healing Data Pipeline:
 
-### Root Causes 🌳
-*   **Operational Fragility:** one failing task blocks all downstream tasks; manual reruns are error-prone.
-*   **Low Observability:** logs scattered across systems; no single view of task health and data dependencies.
-*   **Poor Lineage & Governance:** unclear source→transform→destination mapping; limited auditability.
-*   **Change Volatility:** upstream schema drift, API instability, late files, and transient infra/network failures.
+Automatically detects anomalies & failures.
 
-### Impact 💥
-*   **Revenue & Cost:** missed personalization windows, stockouts, campaign misallocation; over-spend on on-call time.
-*   **Trust:** business users lose confidence in data; teams build shadow pipelines.
-*   **Compliance:** weak traceability for audits and incident post-mortems.
+Applies remediation (retry, fallback, quarantine, backfill).
 
----
+Proves end-to-end lineage & governance.
 
-## ✅ The Solution (What we built)
+✅ Outcomes → Reduced MTTR, protected SLAs/SLOs, increased trust in data.
 
-A **self-healing** data platform that combines orchestration, lineage, and automated remediation.
+🚨 The Problem (Why This Matters)
+Business Symptoms
 
-### Core Capabilities 💡
-1.  **Proactive Detection** – Health checks, data freshness SLAs, volume/profile monitors, and schema guards.
-2.  **Smart Remediation** – Tuned retries with jitter, circuit breakers, dynamic backoff, fallback sources, and quarantine/rewind for bad data.
-3.  **Lineage & Blast-Radius Analysis** – End-to-end lineage (job, dataset, column) to quantify impact and drive safe rollbacks/backfills.
-4.  **Idempotent, Re-runnable Tasks** – Safe to retry without duplicates; checkpointing and exactly-once/at-least-once strategies.
-5.  **Governance-Ready** – Audit trails, metadata, and policy hooks for PII and regulatory requirements.
+Late/missing dashboards; wrong KPIs during critical windows.
 
-### Reference Architecture (deployed in this repo) 🏗️
-*   **Airflow** – Orchestration and scheduling of DAGs (pipelines), retries, SLAs, and task dependencies.
-*   **PostgreSQL** – Durable metadata store (Airflow Metadatabase) and example analytical sink.
-*   **Marquez (OpenLineage)** – Operational metadata + data lineage for jobs and datasets.
-*   **Kafka + Zookeeper (optional)** – Event streaming and dead-letter queues for real-time ingestion.
-*   **Neo4j (optional)** – Graph store for advanced lineage queries or anomaly/impact exploration.
+Fragile jobs that break on schema drift or API limits.
 
-> Note: Kafka/Neo4j are optional depending on your use case. The self-healing patterns apply to both batch and streaming.
+Incident response relying on Slack threads & “pipeline heroes.”
 
-## 🔄 How Self-Healing Works (Step-by-step)
+No clear answer to “Where did this number come from?”
 
-### 1. Detect 🕵️
-*   **Liveness**: task heartbeat, scheduler health.
-*   **Freshness**: *dataset X must update by 07:00 IST*; alert if late.
-*   **Volume/Null/Uniqueness**: profile expectations (e.g., row count ±20%, null rate < 1%).
-*   **Schema**: strict/compatible schema checks; optional contract enforcement.
+Root Causes
 
-### 2. Classify (Root-Cause Hints) 🏷️
-*   Transient network/API issues vs. deterministic code/logic errors.
-*   Upstream unavailability vs. downstream write/permission failures.
-*   Data quality breach vs. structural (schema) drift.
+Operational Fragility: One failing task blocks all downstream.
 
-### 3. Remediate 🩹
-*   **Retry with backoff + jitter** for transient issues.
-*   **Circuit break** dependent tasks to avoid cascading failures.
-*   **Fallback Source** (e.g., cached snapshot, secondary API region) when primary is down.
-*   **Quarantine** suspect batches to a **Dead-Letter** area; continue healthy partitions.
-*   **Backfill** once upstream stabilizes; compute only missing partitions (idempotent).
+Low Observability: Scattered logs; no single view.
 
-### 4. Prove & Learn 🎓
-*   Emit **OpenLineage** events to Marquez for traceability.
-*   Capture incident metadata and outcomes; update runbooks and policies.
+Poor Lineage/Governance: Weak auditability.
 
----
+Change Volatility: API drift, late files, transient network errors.
 
-## 🚨 Example Failure Scenarios & Responses
+Impact
 
-### A) API Rate-Limited During Peak Hours 🚧
-*   **Detection:** 429 responses spike + task SLA at risk.
-*   **Action:** Backoff and retry with jitter; switch to cached snapshot for read-only features; resume primary once window clears.
-*   **Outcome:** No missed ingestion; downstream freshness within SLA.
+💸 Revenue Loss: Missed personalization, campaign errors.
 
-### B) Late File Arrival from Vendor ⏳
-*   **Detection:** Freshness breach on `s3://vendor/d=date` by 06:30 IST.
-*   **Action:** Pause downstream joins; ingest previous day as placeholder; auto-backfill once file lands; mark partitions reconciled.
-*   **Outcome:** Dashboards stay mostly current; final numbers reconcile automatically.
+⏳ Ops Burden: Over-spend on on-call firefighting.
 
-### C) Schema Drift (new column added) ↔️
-*   **Detection:** Contract mismatch on extract step.
-*   **Action:** Route batch to quarantine; continue ingesting other sources; notify owner; apply transform shim (ignore/new column mapping); reprocess.
-*   **Outcome:** No pipeline-wide outage; controlled adaptation.
+📉 Trust Gap: Stakeholders build shadow pipelines.
 
-### D) Downstream Warehouse Write Failure 💾
-*   **Detection:** Insert timeout / permission error.
-*   **Action:** Retry with exponential backoff; if persistent, write to staging; open ticket with lineage context; enable read path from last good partition.
-*   **Outcome:** Minimal downtime; clear blast-radius view for responders.
+⚖️ Compliance Risk: Weak traceability.
 
----
+💡 The Solution (What We Built)
 
-## ⚙️ Operational Model
+A self-healing data platform with:
 
-### SLAs & SLOs 🎯
-*   **Freshness SLOs** per dataset (e.g., D+1 by 07:00 IST; streaming p95 end-to-end < 2 minutes).
-*   **Reliability SLOs** per DAG (e.g., >99.5% successful daily runs).
-*   **Error Budget** to govern changes and deployments.
+Proactive Detection – Health checks, freshness SLAs, schema/volume monitors.
 
-### Idempotency & Exactly-Once ✅
-*   Deterministic keys and upserts; watermarking/checkpointing for replay.
-*   Partitioned processing (by date/hour) to enable safe partial reruns.
+Smart Remediation – Retries w/ jitter, circuit breakers, fallbacks, quarantines, backfills.
 
-### Observability 🔭
-*   Airflow task states, SLAs, retries, and logs.
-*   Marquez/OpenLineage for dataset↔job↔column lineage and impact analysis.
-*   Metrics: success rate, retry rate, time-to-detect, MTTR, number of quarantined batches.
+Lineage & Impact Analysis – End-to-end via OpenLineage.
 
----
+Idempotency – Safe reruns, checkpoints, replay support.
 
-## 🔒 Governance, Security & Compliance
+Governance-Ready – Audit trails, metadata, policy enforcement.
 
-*   **Access Control**: least-privilege for orchestrator, storage, and sinks.
-*   **Data Classification**: tag PII/regulated datasets; restrict propagation.
-*   **Auditability**: lineage + run history + config versioning.
-*   **Privacy**: encrypt in transit (TLS) and at rest; key management via vault/KMS.
+🏗️ Reference Architecture
 
----
+Airflow → Orchestration & scheduling.
 
-## 📈 What This Delivers to the Business
+PostgreSQL → Metadata DB + sink.
 
-*   **Faster Recovery:** MTTR reduced via automation and targeted remediation.
-*   **Protected SLAs:** Predictable data freshness for executive dashboards and ML features.
-*   **Traceability:** Know precisely which reports and models were impacted.
-*   **Lower Ops Cost:** Fewer midnight pages; fewer full-pipeline reruns.
-*   **Trust:** Stakeholders regain confidence in data outputs.
+Marquez (OpenLineage) → Metadata & lineage.
 
-**Sample ROI Levers** 💰
-*   Avoid 2–4 hours/day of manual incident handling.
-*   Prevent missed campaign windows or erroneous decisions due to stale data.
-*   Faster onboarding of new pipelines due to consistent patterns and governance.
+Kafka + Zookeeper (optional) → Streaming + DLQs.
 
----
+Neo4j (optional) → Graph lineage exploration.
 
-## 🌐 Scope & Extensibility
+Architecture Diagram (Mermaid)
+graph TD
+  U[Sources<br>(APIs, DBs, Files)] -->|Extract| A[Airflow DAGs]
+  A -->|Transform| T[Processing Tasks]
+  T -->|Load| D[(Analytics Store / Postgres)]
+  A -->|Emit Metadata| M[Marquez / OpenLineage]
+  K[(Kafka)] -- optional --> A
+  Z[(Zookeeper)] -- manages --> K
+  M --> L[Lineage UI / Impact Analysis]
+  subgraph Self-Healing Controls
+    H1[Health Checks]
+    H2[Retry Policies]
+    H3[Circuit Breakers]
+    H4[Fallback & Quarantine]
+  end
+  H1 -.-> A
+  H2 -.-> A
+  H3 -.-> A
+  H4 -.-> A
 
-*   **In Scope:** Batch orchestration, optional streaming, lineage, health checks, automated remediation, quarantine/backfill patterns.
-*   **Out of Scope (baseline):** Real-time schema registry, advanced ML-driven anomaly detection (can be added), lakehouse optimization.
+🔄 How Self-Healing Works
+Step 1: Detect
 
-**Easy Extensions** 🔌
-*   Integrate a Data Quality framework (e.g., Great Expectations) to formalize tests.
-*   Add Slack/Teams on-call routing with incident tickets pre-filled from lineage.
-*   Promote Kafka dead-letter topics for automated replay.
-*   Use Neo4j to explore lineage/impact as a graph at scale.
+Heartbeats, freshness SLAs, schema drift, anomaly detection.
 
----
+Step 2: Classify
 
-## ❓ FAQ (for non-technical stakeholders)
+Transient vs deterministic failures.
 
-**Q: Does this remove the need for data engineers?**
-*A:* No. It removes repetitive firefighting so engineers can focus on features and governance.
+Upstream vs downstream.
 
-**Q: Can it handle our existing pipelines?**
-*A:* The patterns are technology-agnostic. Airflow orchestrates Python/SQL/Spark/etc. We standardize retries, idempotency, and lineage across them.
+Data quality vs infra issue.
 
-**Q: How do we know it worked during an incident?**
-*A:* Every remediation action is logged and linked in lineage. Dashboards show freshness, retries, quarantines, and backfills by dataset.
+Step 3: Remediate
 
-**Q: Is it safe for regulated data?**
-*A:* Yes—lineage and audit trails, encryption, and role-based access are first-class concerns.
+Retries with exponential backoff + jitter.
 
----
+Circuit break dependent tasks.
 
-## 📚 Glossary
+Fallback to cached snapshots or secondary APIs.
 
-*   **DAG:** Directed Acyclic Graph; defines task order in a pipeline.
-*   **Lineage:** Trace of data’s origin and transformations.
-*   **Quarantine/Dead-Letter:** Holding area for suspect/failed records or batches.
-*   **Idempotent:** Safe to run the same task multiple times without side effects.
-*   **SLA/SLO:** Service Level Agreement/Objectives—commitments on freshness/reliability.
+Quarantine bad data (dead-letter zone).
 
----
+Backfill missing partitions.
 
-## ✅ Decision Checklist for Adopting Self-Healing
+Step 4: Prove & Learn
 
-*   Do we have measurable data freshness targets for key datasets?
-*   Are tasks idempotent with clear partitioning and checkpoints?
-*   Do we emit lineage and health metrics for every job/dataset?
-*   Are remediation actions automated and auditable?
-*   Is there a clear, owned runbook for exceptions that cannot be automated?
+Emit OpenLineage metadata.
 
----
+Log remediation actions.
 
-# 🚀 Self-Healing Data Pipeline — Setup Guide
+Feed learnings into runbooks.
 
-This section explains all commands required to set up, configure, and run the Self-Healing Data Pipeline from scratch.
-It also includes common error fixes so you won’t get stuck.
+⚠️ Example Failure Scenarios
+Scenario	Detection	Auto-Action	Outcome
+API Rate-Limited	429 + SLA breach risk	Retry w/ jitter, fallback snapshot	Ingestion continues
+Late Vendor File	Freshness breach	Pause downstream, auto-backfill later	Dashboards current
+Schema Drift	Contract mismatch	Quarantine, notify, reprocess	No outage
+Warehouse Write Failure	Insert timeout	Retry → staging fallback	SLA preserved
+📊 Operational Model
 
-📌 Prerequisites
+SLAs/SLOs: Freshness (D+1 by 07:00 IST), reliability (>99.5%).
 
-Before starting, make sure you have installed:
+Idempotency: Partition-based reruns, checkpointing.
 
-*   **Docker** → [Download](https://docs.docker.com/get-docker/)
-*   **Docker Compose** → [Install](https://docs.docker.com/compose/install/)
-*   **Git** → [Download](https://git-scm.com/downloads)
-*   Python 3.10+ (optional, only if you plan to run Airflow CLI locally)
+Observability: Airflow state, lineage graphs, metrics (MTTR, retries, quarantines).
 
-📂 1. Clone the Repository
-```bash
-git clone https://github.com/<your-username>/self-healing-data-pipeline.git
-cd self-healing-data-pipeline
-🐳 2. Build and Start the Containers
-code
-Bash
-docker-compose up -d --build
-✅ What this does:
-Builds all services (Airflow Scheduler, Webserver, PostgreSQL, etc.)
-Starts them in the background (-d means detached mode)
-📌 3. Check Container Status
-code
-Bash
-docker ps
-You should see services like:
-airflow-webserver
-airflow-scheduler
-postgres
-airflow-worker (if using Celery)
-⏳ 4. Check Airflow Webserver Health
-code
-Bash
-docker inspect --format='{{.State.Health.Status}}' airflow-webserver
-If it shows:
-✅ healthy → proceed to next step.
-⏳ starting → wait for a few minutes (1-3 mins).
-❌ unhealthy → see Error Fix #1 below.
-👤 5. Create an Admin User
-code
-Bash
-docker-compose exec airflow-webserver airflow users create \
-    --username admin \
-    --firstname YourName \
-    --lastname Admin \
-    --role Admin \
-    --email admin@example.com \
-    --password admin
-✅ One-liner Version
-code
-Bash
-docker-compose exec airflow-webserver airflow users create --username admin --firstname YourName --lastname Admin --role Admin --email admin@example.com --password admin
-🌐 6. Access the Airflow UI
-Once healthy, open your browser and go to:
-🔗 http://localhost:8080
-Username: admin
-Password: admin
-🔄 7. Restart Services (If Needed)
-If you make any config changes:
-code
-Bash
-docker-compose down && docker-compose up -d
-📜 8. View Live Logs
-For debugging the Airflow Webserver:
-code
-Bash
-docker-compose logs -f airflow-webserver
-For checking all services:
-code
-Bash
-docker-compose logs -f
-🧹 9. Stop & Remove All Containers
-code
-Bash
-docker-compose down
-If you want to remove volumes (clears database, start fresh):
-code
-Bash
-docker-compose down -v
-🛠 Common Errors & Fixes
-❌ Error 1: Airflow Webserver Stuck on starting
-code
-Bash
-docker inspect --format='{{.State.Health.Status}}' airflow-webserver
-# Output: starting
-Fix:
-code
-Bash
-docker-compose down -v
-docker-compose up -d --build
-This removes cached volumes and rebuilds everything fresh.
-❌ Error 2: "No Module Named Airflow"
-Fix:
-code
-Bash
-docker-compose build --no-cache
-docker-compose up -d
-❌ Error 3: Database Migration Issues
-If you see something like:
-code
-Code
-sqlalchemy.exc.OperationalError: could not connect to database
-Fix:
-code
-Bash
-docker-compose down -v
-docker-compose up -d
-❌ Error 4: Port 8080 Already in Use
-Fix:
-code
-Bash
-netstat -ano | findstr :8080  # Get the process ID using port 8080 (Windows)
-# On Linux/macOS: lsof -i :8080
-taskkill /PID <PID> /F        # Kill that process (Windows)
-# On Linux/macOS: kill -9 <PID>
-docker-compose up -d
-⚡ Quick Start Summary
-code
-Bash
-# 1. Clone repo
+🛡️ Governance & Security
+
+Role-based access control.
+
+PII tagging + propagation policies.
+
+Full audit trails & lineage.
+
+TLS + encryption at rest.
+
+🚀 Setup Guide
+Prerequisites
+
+Docker & Docker Compose
+
+Git
+
+Python 3.10+ (for optional local CLI)
+
+1️⃣ Clone the Repository
 git clone https://github.com/<your-username>/self-healing-data-pipeline.git
 cd self-healing-data-pipeline
 
-# 2. Start services
+2️⃣ Start Services
 docker-compose up -d --build
 
-# 3. Create admin user
+3️⃣ Create Airflow Admin User
 docker-compose exec airflow-webserver airflow users create \
-    --username admin --firstname YourName --lastname Admin \
-    --role Admin --email admin@example.com --password admin
+  --username admin --firstname YourName --lastname Admin \
+  --role Admin --email admin@example.com --password admin
 
-# 4. Open Airflow UI
-# http://localhost:8080
-🎯 Final Notes
-This project uses Apache Airflow for orchestration.
-It is designed to self-heal by retrying failed tasks, quarantining bad data, and automatically recovering pipelines.
-All configurations are in docker-compose.yml and dags/.
-🤝 Contributions
-We welcome contributions! If you'd like to improve this project, please follow these steps:
-Fork the repository.
-Create a new branch for your feature or bug fix: git checkout -b feature/your-feature-name.
-Make your changes and ensure tests pass.
-Commit your changes with a clear and descriptive message.
-Push your branch to your fork.
-Open a Pull Request to the main branch of this repository, describing your changes in detail.
-⚖️ License
-This project is licensed under the MIT License - see the LICENSE file for details.
-©️ Copyright
-© 2023 [Your Name or Organization]. All rights reserved.
+4️⃣ Access the UI
+
+🌐 Airflow → http://localhost:8080
+
+User: admin | Pass: admin
+
+🛠️ Troubleshooting
+Error	Fix
+Airflow stuck on starting	docker-compose down -v && docker-compose up -d --build
+No module named Airflow	docker-compose build --no-cache && docker-compose up -d
+DB migration issues	docker-compose down -v && docker-compose up -d
+Port 8080 in use	Kill PID: `netstat -ano
+📚 FAQ
+
+Q: Does this replace data engineers?
+A: No—it frees them from firefighting.
+
+Q: Can it work with existing pipelines?
+A: Yes—Airflow orchestrates Python/SQL/Spark/etc.
+
+Q: How do we verify remediation?
+A: Logged actions + lineage graphs.
+
+Q: Is it compliance-safe?
+A: Yes—auditable, encrypted, governed.
+
+📖 Glossary
+
+DAG → Pipeline structure in Airflow.
+
+Lineage → Full source→transform→destination trace.
+
+Quarantine → Dead-letter area for bad data.
+
+Idempotent → Safe reruns without duplication.
+
+SLA/SLO → Service commitments on freshness/reliability.
+
+🛣️ Roadmap
+
+🔹 Integrate Great Expectations for DQ tests.
+
+🔹 Slack/Teams incident notifications.
+
+🔹 ML-based anomaly detection.
+
+🔹 Neo4j lineage graph explorer.
+
+✅ Adoption Checklist
+
+ Defined freshness/reliability SLAs.
+
+ Tasks are idempotent & partitioned.
+
+ Lineage & health metrics emitted.
+
+ Automated remediation enabled.
+
+ Runbooks for manual edge-cases.
+
+👨‍💻 Author
+
+Built with ❤️ by Dharshan
+
+📜 License
+
+© 2025 Dharshan. MIT License.
