@@ -55,30 +55,6 @@ A **self-healing** data platform that seamlessly combines orchestration, lineage
 
 > Note: Kafka/Neo4j are optional depending on your specific use case. The self-healing patterns apply robustly to both batch and streaming scenarios.
 
-### 🏗️ Architecture Diagram
-
-```mermaid
-graph TD
-  U[Upstream Sources<br/>(APIs, DBs, Files)] -->|Extract| A[Airflow DAGs]
-  A -->|Transform| T[Processing Tasks]
-  T -->|Load| D[(Analytics Store / Postgres)]
-  A -->|Emit metadata| M[Marquez / OpenLineage]
-  K[(Kafka Broker)] -- optional --> A
-  Z[(Zookeeper)] -- manages --> K
-  M --> L[Lineage UI / Impact Analysis]
-  subgraph Self-Healing Controls
-    H1[Health Checks]
-    H2[Retry Policies]
-    H3[Circuit Breakers]
-    H4[Fallback & Quarantine]
-  end
-  H1 -.-> A
-  H2 -.-> A
-  H3 -.-> A
-  H4 -.-> A
-
-
-
 🛠 How Self-Healing Works (Step-by-step)
 Detect: 🚨
 Liveness: Task heartbeat, scheduler health.
@@ -338,5 +314,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 🙏 Acknowledgements
 Inspired by the principles of robust data engineering and DevOps.
 Built upon the incredible work of the Apache Airflow, PostgreSQL, and OpenLineage communities.
-Made with ❤️ by [Your Name/Organization Name]
-Copyright © 2023. All rights reserved.
+Created By Sondi Dharshan
+Copyright © 2025. All rights reserved.
