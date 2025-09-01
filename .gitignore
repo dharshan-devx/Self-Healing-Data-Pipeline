@@ -1,0 +1,37 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+
+# Logs (Airflow, Neo4j, Spark, custom)
+logs/
+*/logs/
+*.log
+
+# Airflow artifacts
+airflow/logs/
+airflow/__pycache__/
+airflow/*.pid
+airflow/*.db
+
+# Spark checkpoints
+checkpoint/
+checkpoints/
+
+# Great Expectations cache
+great_expectations/uncommitted/
+
+# Docker
+*.pid
+*.sock
+
+# System files
+.DS_Store
+Thumbs.db
